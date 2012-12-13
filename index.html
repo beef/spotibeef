@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+    <head>
+
+        <style>
+            @import url('sp://import/css/eve.css');
+            @import url('sp://spotibeef/css/main.css');
+            @import url('sp://spotibeef/css/github.css');
+        </style>
+
+        <script src="sp://spotibeef/js/rainbow-custom.min.js"></script>
+        <script src="sp://spotibeef/js/socket.io.min.js"></script>
+
+
+        <script>
+            window.onload = function() {
+                /* Instantiate the global sp object; include models & views */
+                var sp = getSpotifyApi(1);
+                var models = sp.require("sp://import/scripts/api/models");
+                var player = models.player;
+                var track = '';
+
+                var socket = io.connect('http://localhost');
+                
+                //pause
+                socket.on('pause_the_track', function (data) {
+                    console.log('pause');
+                    player.playing = false;
+                });
+
+                //play
+                socket.on('play_the_track', function (data) {
+                    console.log('play');
+                    player.playing = true;
+                });
+
+                //next
+                socket.on('play_the_next_track', function (data) {
+                    console.log('next');
+                    player.next();
+                });
+
+                //previous
+                socket.on('play_the_previous_track', function (data) {
+                    console.log('previous');
+                    player.previous();
+                });
+
+                //get the track
+                socket.on('get_the_track', function (data) {
+                    console.log('sending the track');
+                    socket.emit('track_change', { name: player.track.data.name, album:  player.track.data.album.name, artist: player.track.data.album.artist.name});
+                });
+
+                if (player.track == null) {
+                    socket.emit('track_change', { name: 'Nothing Playing', album:  'Nothing Playing', artist: 'Nothing Playing'});
+                }  else  {
+                   socket.emit('track_change', { name: player.track.data.name, album:  player.track.data.album.name, artist: player.track.data.album.artist.name});
+                }
+
+                //let clients know the current track
+                player.observe(models.EVENT.CHANGE, function(event) {
+                    if(event.data.curtrack===true) {
+                        console.log("spotify signalling the track has changed")
+                        socket.emit('track_change', { name: player.track.data.name, album:  player.track.data.album.name, artist: player.track.data.album.artist.name});
+                    }
+                });
+            }
+        </script>
+    </head>
+    <body>
+        <div id="wrapper">
+            <ul class="breadcrumb">
+                <li><a href="sp://spotibeef/index.html">&laquo; Back to main page</a></li>
+            </ul>
+
+
+            <h3>Nothing to see here</h3>
+            <div id="np">
+            <p>This App simply exposes the API via Websockets</p>
+            </div>
+        </div><!-- /wrapper -->
+    </body>
+</html>
