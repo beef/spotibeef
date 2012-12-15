@@ -48,21 +48,21 @@
 
                 //get the track
                 socket.on('get_the_track', function (data) {
-                    console.log('sending the track');
-                    socket.emit('track_change', { name: player.track.data.name, album:  player.track.data.album.name, artist: player.track.data.album.artist.name});
+                    console.log(player.track.data);
+                    socket.emit('track_change', { name: player.track.data.name, album:  player.track.data.album.name, artist: player.track.data.album.artist.name, cover: player.track.data.album.cover});
                 });
 
                 if (player.track == null) {
                     socket.emit('track_change', { name: 'Nothing Playing', album:  'Nothing Playing', artist: 'Nothing Playing'});
                 }  else  {
-                   socket.emit('track_change', { name: player.track.data.name, album:  player.track.data.album.name, artist: player.track.data.album.artist.name});
+                   socket.emit('track_change', { name: player.track.data.name, album:  player.track.data.album.name, artist: player.track.data.album.artist.name, cover: player.track.data.album.cover});
                 }
 
                 //let clients know the current track
                 player.observe(models.EVENT.CHANGE, function(event) {
                     if(event.data.curtrack===true) {
                         console.log("spotify signalling the track has changed")
-                        socket.emit('track_change', { name: player.track.data.name, album:  player.track.data.album.name, artist: player.track.data.album.artist.name});
+                        socket.emit('track_change', { name: player.track.data.name, album:  player.track.data.album.name, artist: player.track.data.album.artist.name, cover: player.track.data.album.cover});
                     }
                 });
             }
