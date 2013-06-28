@@ -14,14 +14,25 @@
 
         <script>
             window.onload = function() {
-                /* Instantiate the global sp object; include models & views */
+
                 var sp = getSpotifyApi(1);
                 var models = sp.require("sp://import/scripts/api/models");
                 var player = models.player;
                 var track = '';
 
-                var socket = io.connect('http://localhost');
-                
+                var socket = io.connect('http://127.0.0.1:3000');
+
+                var playlist_url = 'http://open.spotify.com/user/wearebeef/playlist/6AMs3RQoWT4r51iywJ7GXQ';
+                var queue_url = 'spotify:user:tbertz:playlist:3P5oUsPR09fXpJhDUMGwH7';
+
+                var playlist = models.Playlist.fromURI(playlist_url, function(playlist) {
+                    console.log("Playlist loaded", playlist.name);
+                });
+
+                var queue = models.Playlist.fromURI(queue_url, function(queue) {
+                    console.log("Queue loaded", queue.name);
+                });
+
                 //pause
                 socket.on('pause_the_track', function (data) {
                     console.log('pause');
@@ -29,9 +40,12 @@
                 });
 
                 //play
-                socket.on('play_the_track', function (data) {
-                    console.log('play');
-                    player.playing = true;
+                socket.on('start_playing', function (data) {
+                    if(queue.tracks.length>0) {
+                        player.play(queue.uri);
+                    } else {
+                        player.play(playlist.uri);
+                    }   
                 });
 
                 //next
@@ -45,25 +59,47 @@
                     console.log('previous');
                     player.previous();
                 });
+                
+                //queue selected track
+                socket.on('queue_that_track', function (data) {
+                    queue.add(data.data['data']);
+                    socket.emit('the_queue', { tracks: queue.tracks});
+                });
+
+                //remove selected track
+                socket.on('remove_that_track', function (data) {
+                    queue.remove(data.data['data']);
+                    socket.emit('the_queue', { tracks: queue.tracks});
+                });
 
                 //get the track
                 socket.on('get_the_track', function (data) {
-                    console.log(player.track.data);
-                    socket.emit('track_change', { name: player.track.data.name, album:  player.track.data.album.name, artist: player.track.data.album.artist.name, cover: player.track.data.album.cover});
+                    console.log("sending playlist");
+                    socket.emit('track_change', { uri: player.track.data.uri, playing: player.playing, name: player.track.data.name, album:  player.track.data.album.name, artist: player.track.data.album.artist.name, cover: player.track.data.album.cover});
+                });
+
+                //playlist
+                socket.on('get_the_playlist', function (data) {
+                    socket.emit('the_playlist', { tracks: playlist.tracks});
+                });
+
+                //queue
+                socket.on('get_the_queue', function (data) {
+                    socket.emit('the_queue', { tracks: queue.tracks});
                 });
 
                 if (player.track == null) {
                     socket.emit('track_change', { name: 'Nothing Playing', album:  'Nothing Playing', artist: 'Nothing Playing'});
                 }  else  {
-                   socket.emit('track_change', { name: player.track.data.name, album:  player.track.data.album.name, artist: player.track.data.album.artist.name, cover: player.track.data.album.cover});
+                    socket.emit('track_change', { uri: player.track.data.uri, name: player.track.data.name, album:  player.track.data.album.name, artist: player.track.data.album.artist.name, cover: player.track.data.album.cover});
                 }
 
                 //let clients know the current track
                 player.observe(models.EVENT.CHANGE, function(event) {
+                    console.log(event);
                     if(event.data.curtrack===true) {
-                        console.log("spotify signalling the track has changed")
-                        socket.emit('track_change', { name: player.track.data.name, album:  player.track.data.album.name, artist: player.track.data.album.artist.name, cover: player.track.data.album.cover});
-                    }
+                        socket.emit('track_change', { uri: player.track.data.uri, name: player.track.data.name, album:  player.track.data.album.name, artist: player.track.data.album.artist.name, cover: player.track.data.album.cover});
+                    }   
                 });
             }
         </script>
