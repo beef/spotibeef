@@ -25,6 +25,12 @@
                 var playlist_url = 'http://open.spotify.com/user/wearebeef/playlist/6AMs3RQoWT4r51iywJ7GXQ';
                 var queue_url = 'spotify:user:tbertz:playlist:3P5oUsPR09fXpJhDUMGwH7';
 
+                var played_track;
+                var current_list;
+                var swap_to_queue;
+                var paused = false;
+
+
                 var playlist = models.Playlist.fromURI(playlist_url, function(playlist) {
                     console.log("Playlist loaded", playlist.name);
                 });
@@ -33,36 +39,44 @@
                     console.log("Queue loaded", queue.name);
                 });
 
-                //pause
+                // //pause
                 socket.on('pause_the_track', function (data) {
-                    console.log('pause');
+                    paused = true;
                     player.playing = false;
                 });
 
                 //play
                 socket.on('start_playing', function (data) {
-                    if(queue.tracks.length>0) {
-                        player.play(queue.uri);
+                    if(player.playing === false && paused) {
+                        player.playing = true;
+                        paused = false;
+                    } else if(player.playing) {
+                        return true;
                     } else {
-                        player.play(playlist.uri);
-                    }   
+                        start_playing();
+                        paused = false;
+                    }
                 });
 
                 //next
                 socket.on('play_the_next_track', function (data) {
-                    console.log('next');
+                    paused = false;
                     player.next();
                 });
 
                 //previous
                 socket.on('play_the_previous_track', function (data) {
-                    console.log('previous');
+                    paused = false;
                     player.previous();
                 });
                 
                 //queue selected track
                 socket.on('queue_that_track', function (data) {
+                    if(queue.length === 0) {
+                        swap_to_queue = true;
+                    }
                     queue.add(data.data['data']);
+                    
                     socket.emit('the_queue', { tracks: queue.tracks});
                 });
 
@@ -88,19 +102,60 @@
                     socket.emit('the_queue', { tracks: queue.tracks});
                 });
 
-                if (player.track == null) {
+                if (player.track === null) {
                     socket.emit('track_change', { name: 'Nothing Playing', album:  'Nothing Playing', artist: 'Nothing Playing'});
+                    start_playing();
                 }  else  {
+                    console.log(player);
+                    played_track = player.track;
                     socket.emit('track_change', { uri: player.track.data.uri, name: player.track.data.name, album:  player.track.data.album.name, artist: player.track.data.album.artist.name, cover: player.track.data.album.cover});
                 }
 
                 //let clients know the current track
                 player.observe(models.EVENT.CHANGE, function(event) {
-                    console.log(event);
-                    if(event.data.curtrack===true) {
-                        socket.emit('track_change', { uri: player.track.data.uri, name: player.track.data.name, album:  player.track.data.album.name, artist: player.track.data.album.artist.name, cover: player.track.data.album.cover});
-                    }   
+                    console.log(current_list);
+                    if(player.track != null) {
+                        if(swap_to_queue) {
+                            swap_to_queue = false;
+                            start_playing();
+                            
+                        } else {
+                            if(!paused) {
+                                socket.emit('track_change', { uri: player.track.data.uri, name: player.track.data.name, album:  player.track.data.album.name, artist: player.track.data.album.artist.name, cover: player.track.data.album.cover});
+                                played_track = player.track.data.uri;
+                                clear_from_queue();
+                            }  
+                        }
+                    } else {
+                        start_playing();
+                    }
                 });
+
+                function clear_from_queue() {
+                    if(played_track&&queue.tracks.length>0) {
+                        for(var i=0;i<queue.tracks.length;i++) {
+                            if(queue.tracks[i].data.uri === player.track.data.uri) {
+                                queue.remove(queue.tracks[i].data.uri);
+                            }
+                        }
+                        socket.emit('the_queue', { tracks: queue.tracks});
+                    }
+                }
+
+                function start_playing() {
+                    var randomnumber=Math.floor(Math.random()*playlist.tracks.length)
+                    if(queue.tracks.length>0) {
+                        player.shuffle = false;
+                        player.play(queue.uri);
+                        played_track = player.track.data.uri;
+                        current_list = 'queue';
+                    } else {
+                        player.shuffle = true;
+                        player.index = randomnumber;
+                        player.play(playlist.uri, playlist.uri, randomnumber);
+                        current_list = 'playlist';
+                    }
+                }
             }
         </script>
     </head>
