@@ -94,7 +94,13 @@
 
                 //playlist
                 socket.on('get_the_playlist', function (data) {
-                    socket.emit('the_playlist', { tracks: playlist.tracks});
+                    var tracks = playlist.tracks.slice(data.slice.from, data.slice.to);
+                    socket.emit('the_playlist', { tracks: tracks});
+                });
+
+                //playlist length
+                socket.on('get_the_playlist_length', function (data) {
+                    socket.emit('the_playlist_length', { tracks: playlist.tracks.length});
                 });
 
                 //queue

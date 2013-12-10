@@ -1,7 +1,7 @@
 Spotibeef Spotify Plugin
 ===============
 
-This Spotify plugin exposes the  API externally using Websockets. This allows you to control the play back and gather information from the player. It has been built to be used with the [Spotibeef Server](https://github.com/beef/spotibeef-server)
+This Spotify plugin exposes the players plugin API externally using Websockets. This allows you to control the play back and gather information from the player. It has been built to be used with the [Spotibeef Server](https://github.com/beef/spotibeef-server)
 
 It is hacky as. Be warned.
 
