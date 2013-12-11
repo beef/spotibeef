@@ -92,9 +92,21 @@
                     socket.emit('track_change', { uri: player.track.data.uri, playing: player.playing, name: player.track.data.name, album:  player.track.data.album.name, artist: player.track.data.album.artist.name, cover: player.track.data.album.cover});
                 });
 
+                function sortByKey(array, key) {
+                    return array.sort(function(a, b) {
+                        var x = a.data.album.artist[key]; var y = b.data.album.artist[key];
+                        return ((x < y) ? -1 : ((x > y) ? 1 : 0));
+                    });
+                }
+                
                 //playlist
                 socket.on('get_the_playlist', function (data) {
-                    var tracks = playlist.tracks.slice(data.slice.from, data.slice.to);
+                    if(data.slice.to>playlist.tracks.length) {
+                        data.slice.to = playlist.tracks.length;
+                    }
+                    console.log(playlist.tracks);
+                    var tracks = sortByKey(playlist.tracks, "name");
+                    tracks = tracks.slice(data.slice.from, data.slice.to);
                     socket.emit('the_playlist', { tracks: tracks});
                 });
 
